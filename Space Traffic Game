@@ -1,0 +1,164 @@
+/*
+Victor Lau
+June 21, 2021
+
+In this game, you are a UFO ship trying to navigate your way through space. However, there is a certain zone you are allowed to fly in,
+and there is a lot of space traffic to go around. You can press W, the space bar, or the up arrow key to move up, and you will gradually move down.
+Be careful not to cause any accidents by crashing into UFO's. As you move on, your speed will increase (technically the other UFO's), and the minimum
+and maximum size of the UFO's will go up.
+
+Image Credits:
+https://codehs.com/uploads/6ba295c1ab30b01157010ab7882d84ec
+https://codehs.com/uploads/b82d166254297a66f7d657985afe8611
+https://codehs.com/uploads/9e9e79b37cd3423314c3311094440d8e
+*/
+
+//Constants
+var GAME_SIZE = 500;
+var background;
+var player;
+var playerWidth = 120;
+var playerHeight = 40;
+var ufo;
+var space = 25;
+var minSize = 50;
+var maxSize = 100;
+var delay = 20;
+var y = 3;
+var randomY;
+var randomSize;
+var score = 0;
+var scoreText;
+var speed = 5;
+
+
+function start() {
+    setSize(GAME_SIZE, GAME_SIZE);
+    
+    //Background, player, and UFO images
+    background = new WebImage("https://codehs.com/uploads/6ba295c1ab30b01157010ab7882d84ec");
+    background.setSize(700, getHeight());
+    add(background);
+    
+    player = new WebImage("https://codehs.com/uploads/b82d166254297a66f7d657985afe8611");
+    player.setSize(playerWidth, playerHeight);
+    player.setPosition(space, getHeight()/2);
+    add(player); 
+    
+    ufo = new WebImage("https://codehs.com/uploads/9e9e79b37cd3423314c3311094440d8e");
+    randomize();
+    
+    //Sets the score at the top of the screen
+    scoreText = new Text("Score: " + score, "20pt Arial");
+    scoreText.setPosition((getWidth() / 2) - scoreText.getWidth() / 2, space);
+    scoreText.setColor(Color.white);
+    add(scoreText);
+    
+    //Sets gravity, key controls, movement of UFO's, and changing of scores
+    setTimer(gravity, 25);
+    keyDownMethod(moveUp);
+    setTimer(moveUfos, delay);
+    setTimer(changeScore, 1000);
+}
+
+//Moves the player up when either the space, the up arrow, or the letter W is held down and includes momentum
+function moveUp(e) {
+    if (e.keyCode == Keyboard.SPACE || e.keyCode == Keyboard.UP || e.keyCode == Keyboard.letter('W')) {
+        y -= 1.3;
+    } 
+}
+
+function gravity() {
+    //Calls the collision function
+    collision();
+    //Gravity with limits on how fast it can rise or drop 
+    if (y < 6) {
+        y += 0.5;
+    } else if (y > 6) {
+        y = 6;
+    } else if (y < -2) {
+        y = -2;
+    } 
+    player.move(0, y);
+}
+
+function collision() {
+    //Makes sure the player stays in the screenn
+    if (player.getY() < 0) {
+        player.setPosition(space, 0);
+    } else if (player.getY() > getHeight() - playerHeight) {
+        player.setPosition(space, getHeight() - playerHeight);
+    }
+    
+    //Checks for Collision in the top left, top right, bottom left, and bottom right of the player, also accounts for if a UFO hits a player and not
+    //just the image of the player (because I can't crop the image and I want to make sure the UFO's actually hit the player).
+    var topLeft = getElementAt(player.getX() + space, player.getY() + space);
+    var topRight = getElementAt(player.getX() + player.getWidth() - space, player.getY() + space);
+    var bottomLeft = getElementAt(player.getX() + space, player.getY() + player.getHeight() - space);
+    var bottomRight = getElementAt(player.getX() + player.getWidth() - space, player.getY() + player.getHeight() - space);
+    //Checks if it's not nothing, not the background, and not the player (so that the game doesn't automatically end)
+    if (topLeft != null && topLeft != background && topLeft != player) {
+        gameOver();
+    } else if (topRight != null && topRight != background && topRight != player) {
+        gameOver();
+    } else if (bottomLeft != null && bottomLeft != background && bottomLeft != player) {
+        gameOver();
+    } else if (bottomRight != null && bottomRight != background && bottomRight != player) {
+        gameOver();
+    }
+}
+
+//Randomizes the size and where the UFO is
+function randomize() {
+    randomSize = Randomizer.nextInt(minSize, maxSize);
+    randomY = Randomizer.nextInt(0, getHeight() - playerHeight); 
+    createUfo1(randomSize, randomY);
+}
+
+//Creates the UFO with parameters from the randomization
+function createUfo1(size, y) {
+    ufo.setPosition(getWidth() + size, y);
+    ufo.setSize(size, size);
+    add(ufo);
+}
+
+//Moves the UFO's, resets the position once it crosses the left side of the screen
+function moveUfos() {
+    ufo.move(-speed, 0);
+    if (ufo.getX() < -ufo.getWidth()) {
+        randomize(); 
+        ufo.setPosition(getWidth() + randomSize, randomY);
+    }
+}
+
+//Increases minimum and maximum size of UFO's (with limits) and increases the speed as the score gets higher.
+function changeScore() {
+    score++;
+    minSize += 5;
+    maxSize++;
+    //Limit to how high the max size can be
+    if (minSize > 100) {
+        minSize -= 5;
+    }
+    if (maxSize > 200) {
+        maxSize--;
+    }
+    if (score % 10 == 0) {
+        speed++;
+    }
+    scoreText.setText ("Score: " + score);
+    remove(scoreText);
+    add(scoreText);
+}
+
+//Stops all timers and adds end game message
+function gameOver() {
+    stopTimer(gravity);
+    stopTimer(moveUfos);
+    stopTimer(changeScore);
+
+    var text = new Text ("You crashed into a UFO! :(", "20pt Arial");
+    text.setPosition((getWidth() / 2) - text.getWidth() / 2, (getHeight() / 2) - text.getHeight() / 2);
+    text.setColor(Color.white);
+    add(text);
+}
